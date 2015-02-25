@@ -1,9 +1,13 @@
---require 'waterlua'
+require 'waterlua'
 
 local params = {...}
 
-local map = io.toAbsPath(params[1])
+local map = params[1]
 local lookupPaths = params[2]
+
+assert(map, 'no map')
+
+map = io.toAbsPath(map)
 
 if (lookupPaths ~= nil) then
 	lookupPaths = lookupPaths:split(';')
@@ -33,7 +37,7 @@ assert(map, 'no map')
 
 osLib.clearScreen()
 
---io.local_require([[..\..\portLib]])
+require 'portLib'
 
 flushDir(inputDir)
 createDir(inputDir)
@@ -104,7 +108,7 @@ local function searchLine(line)
 	local sear = '^%s*//! import%s+([%w%p_]*)'
 
 	local name = line:match(sear)
---assert(false, line)
+
 	if (name ~= nil) then
 		--if ((name:sub(1, 1) == "\"") and (name:sub(name:len(), name:len()) == "\"")) then
 		--	name = name:sub(2, name:len() - 1)
@@ -113,19 +117,24 @@ local function searchLine(line)
 
 		local tryTable = {}
 
-		local fImp = io.open(name, 'r')
+		tryTable[#tryTable + 1] = name
 
 		if not io.isAbsPath(name) then
-			local i = 1
-
-			while ((fImp == nil) and (i <= #lookupPaths)) do
-				local path = lookupPaths[i]..name
-
-				fImp = io.open(path, 'r')
-				tryTable[#tryTable + 1] = path
+			for i = 1, #lookupPaths, 1 do
+				tryTable[#tryTable + 1] = lookupPaths[i]..name
 
 				i = i + 1
 			end
+		end
+
+		local fImp = io.open(tryTable[1], 'r')
+
+		local i = 2
+
+		while ((fImp == nil) and (i <= #tryTable)) do
+			fImp = io.open(tryTable[i], 'r')
+
+			i = i + 1
 		end
 
 		if (fImp == nil) then
